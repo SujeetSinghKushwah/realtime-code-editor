@@ -1,14 +1,13 @@
 import { io } from 'socket.io-client';
 
-const options = {
-    'force new connection': true,
-    reconnectionAttempts: 'Infinity',
-    timeout: 10000,
-    transports: ['websocket'],
+export const initSocket = async () => {
+    const options = {
+        'force new connection': true,
+        reconnectionAttempts: 'Infinity',
+        timeout: 10000,
+        transports: ['websocket'],
+    };
+
+    // Render ka URL automatically pick karega ya localhost use karega
+    return io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000', options);
 };
-
-// Agar production (Render) par hai toh wahi URL use karega, 
-// nahi toh localhost use karega.
-const socket = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000', options);
-
-export default socket;
