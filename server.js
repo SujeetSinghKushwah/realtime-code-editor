@@ -3,12 +3,14 @@ const app = express();
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const ACTIONS = require('./src/Actions'); // Ensure this path is correct
+const ACTIONS = require('./src/Actions'); 
 
 const server = http.createServer(app);
+
+// 1. CORS Update: Localhost hata kar '*' kar diya hai taaki Render par error na aaye
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "*", 
         methods: ["GET", "POST"]
     }
 });
@@ -29,7 +31,7 @@ function getAllConnectedClients(roomId) {
 io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
 
-    // 1. Join Room Logic
+    // Join Room Logic
     socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
         userSocketMap[socket.id] = username;
         socket.join(roomId);
@@ -43,25 +45,23 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 2. Real-time Code Sync (Fixed)
+    // Real-time Code Sync
     socket.on(ACTIONS.CODE_CHANGE, ({ roomId, code }) => {
-        // socket.in(roomId) se sender ke alawa baki sabko code jayega
         socket.in(roomId).emit(ACTIONS.CODE_CHANGE, { code });
     });
 
-    // 3. Initial Code Sync (Naye user ke liye)
+    // Initial Code Sync
     socket.on(ACTIONS.SYNC_CODE, ({ socketId, code }) => {
         io.to(socketId).emit(ACTIONS.CODE_CHANGE, { code });
     });
 
-    // 4. Language Change Broadcast
+    // Language Change Broadcast
     socket.on('language-change', ({ roomId, language }) => {
         socket.in(roomId).emit('language-change', { language });
     });
 
-    // 5. Chat Message Logic
+    // Chat Message Logic
     socket.on('send-message', ({ roomId, message, username }) => {
-        // io.to(roomId) se pure room ko (sender ko bhi) message milega
         io.to(roomId).emit('receive-message', {
             message,
             username,
@@ -69,7 +69,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 6. Disconnect Logic
+    // Disconnect Logic
     socket.on('disconnecting', () => {
         const rooms = [...socket.rooms];
         rooms.forEach((roomId) => {
@@ -82,6 +82,18 @@ io.on('connection', (socket) => {
         socket.leave();
     });
 });
+
+// --- PRODUCTION DEPLOYMENT LOGIC START ---
+
+// 1. React ke 'build' folder ko access karne ke liye
+app.use(express.static(path.join(__dirname, 'build')));
+
+// 2. Kisi bhi route par index.html serve karne ke liye (React Routing support)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+// --- PRODUCTION DEPLOYMENT LOGIC END ---
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
