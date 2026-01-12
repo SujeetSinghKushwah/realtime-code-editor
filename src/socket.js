@@ -1,13 +1,14 @@
 import { io } from 'socket.io-client';
 
-export const initSocket = async () => {
-    const options = {
-        'force new connection': true,
-        reconnectionAttempts: 'Infinity',
-        timeout: 10000,
-        transports: ['websocket'],
-    };
-    
-    // Direct URL use karein taaki process.env ka panga na ho
-    return io("http://localhost:5000", options);
+const options = {
+    'force new connection': true,
+    reconnectionAttempts: 'Infinity',
+    timeout: 10000,
+    transports: ['websocket'],
 };
+
+// Agar production (Render) par hai toh wahi URL use karega, 
+// nahi toh localhost use karega.
+const socket = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000', options);
+
+export default socket;
