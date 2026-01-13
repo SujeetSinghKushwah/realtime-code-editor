@@ -16,6 +16,7 @@ import ACTIONS from '../Actions';
 
 const Editor = ({ socketRef, roomId, onCodeChange, language }) => {
     const editorRef = useRef(null);
+    const timeoutRef = useRef(null); // Auto-save timer ke liye
 
     useEffect(() => {
         async function init() {
@@ -27,7 +28,6 @@ const Editor = ({ socketRef, roomId, onCodeChange, language }) => {
                     autoCloseTags: true,
                     autoCloseBrackets: true,
                     lineNumbers: true,
-
                     gutters: ["CodeMirror-lint-markers"],
                     lint: true,
                 }
@@ -37,23 +37,43 @@ const Editor = ({ socketRef, roomId, onCodeChange, language }) => {
             editorRef.current.on('change', (instance, changes) => {
                 const { origin } = changes;
                 const code = instance.getValue();
-                onCodeChange(code); // EditorPage ki state update karein
+                onCodeChange(code); 
                 
-                // Agar change 'setValue' se nahi aaya (matlab user ne khud type kiya)
                 if (origin !== 'setValue') {
+                    // 1. Real-time sync dusre users ke liye
                     if (socketRef.current) {
                         socketRef.current.emit(ACTIONS.CODE_CHANGE, {
                             roomId,
                             code,
                         });
+
+                        // 2. Debounced Auto-save Logic
+                        // Purana timer clear karo
+                        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                        
+                        // Naya timer set karo: 2 second baad DB mein save hoga
+                        timeoutRef.current = setTimeout(() => {
+                            socketRef.current.emit('save-document', {
+                                roomId,
+                                code,
+                            });
+                            console.log('Auto-saving to Database...');
+                        }, 2000); 
                     }
                 }
             });
         }
         init();
-    }, []); // Sirf mount par ek baar chalega
 
-    // Language change ko handle karne ke liye
+        // Cleanup function
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (editorRef.current) {
+                editorRef.current.toTextArea();
+            }
+        };
+    }, []); 
+
     useEffect(() => {
         if (editorRef.current) {
             editorRef.current.setOption('mode', {
@@ -63,12 +83,10 @@ const Editor = ({ socketRef, roomId, onCodeChange, language }) => {
         }
     }, [language]);
 
-    // Socket se naya code receive karne ke liye
     useEffect(() => {
         if (socketRef.current) {
             socketRef.current.on(ACTIONS.CODE_CHANGE, ({ code }) => {
                 if (code !== null) {
-                    // Wahi code set karein jo socket se aaya hai
                     if (editorRef.current.getValue() !== code) {
                         editorRef.current.setValue(code);
                     }

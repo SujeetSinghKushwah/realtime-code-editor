@@ -3,11 +3,18 @@ const app = express();
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 const ACTIONS = require('./src/Actions'); 
+const Document = require('./models/Document');
 
 const server = http.createServer(app);
 
-// 1. CORS Update: Localhost hata kar '*' kar diya hai taaki Render par error na aaye
+// --- DATABASE CONNECTION ---
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/code-editor';
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('Connected to MongoDB '))
+    .catch((err) => console.error('MongoDB connection error', err));
+
 const io = new Server(server, {
     cors: {
         origin: "*", 
@@ -28,13 +35,25 @@ function getAllConnectedClients(roomId) {
     );
 }
 
+async function findOrCreateDocument(id) {
+    if (id == null) return;
+    const document = await Document.findById(id);
+    if (document) return document;
+    return await Document.create({ _id: id, code: "" });
+}
+
 io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
 
     // Join Room Logic
-    socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
+    socket.on(ACTIONS.JOIN, async ({ roomId, username }) => {
         userSocketMap[socket.id] = username;
         socket.join(roomId);
+
+        // Database se purana code load karke user ko bhejna
+        const document = await findOrCreateDocument(roomId);
+        socket.emit(ACTIONS.CODE_CHANGE, { code: document.code });
+
         const clients = getAllConnectedClients(roomId);
         clients.forEach(({ socketId }) => {
             io.to(socketId).emit(ACTIONS.JOINED, {
@@ -45,9 +64,19 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Real-time Code Sync
+    // 1. Real-time Code Sync (Fast Sync without DB update)
     socket.on(ACTIONS.CODE_CHANGE, ({ roomId, code }) => {
         socket.in(roomId).emit(ACTIONS.CODE_CHANGE, { code });
+    });
+
+    // 2. Dedicated Auto-Save Event (Database Update)
+    socket.on('save-document', async ({ roomId, code }) => {
+        try {
+            await Document.findByIdAndUpdate(roomId, { code });
+            // console.log(`Room ${roomId} autosaved.`);
+        } catch (e) {
+            console.error("Save error:", e);
+        }
     });
 
     // Initial Code Sync
@@ -83,17 +112,11 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- PRODUCTION DEPLOYMENT LOGIC START ---
-
-// 1. React ke 'build' folder ko access karne ke liye
+// --- PRODUCTION DEPLOYMENT LOGIC ---
 app.use(express.static(path.join(__dirname, 'build')));
-
-// 2. Kisi bhi route par index.html serve karne ke liye (React Routing support)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
-
-// --- PRODUCTION DEPLOYMENT LOGIC END ---
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
