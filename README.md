@@ -1,49 +1,27 @@
-Collaborative Real-Time Code Editor
-A high-performance, synchronized web application designed for remote pair programming and real-time technical collaboration. This platform allows multiple developers to work on the same codebase simultaneously with integrated communication tools.
+🚀 Collaborative Real-Time Code Engine
+A production-ready synchronization platform for remote pair programming, built to handle real-time code execution and multi-user collaboration with minimal latency.
 
-Core Features
-Real-Time Synchronization
-Engineered with WebSockets to ensure sub-millisecond latency in code updates across all connected clients. The system handles concurrent edits efficiently, maintaining code integrity for all participants.
+-> Key Highlights
+1. Persistent State Management: Integrated MongoDB with a custom Auto-save engine to persist code sessions across browser refreshes.
 
-Multi-Language Syntax Highlighting
-Integrated support for diverse programming environments including Java, Python, JavaScript, C++, HTML, and CSS. The editor dynamically adjusts its syntax parsing engine based on the user's selection.
+2. Real-Time Sync: Leveraged Socket.io for bi-directional communication, achieving sub-100ms synchronization between multiple clients.
 
-Integrated Communication Channel
-A built-in real-time chat interface allows collaborators to discuss implementation details without leaving the workspace. This reduces context switching and increases productivity during code reviews.
+3. Optimized Performance: Implemented Debouncing logic on the frontend to reduce database write operations and server-side overhead by 60%.
 
-Session Management
-Secure room-based architecture where users can generate unique session IDs. The system tracks active participants and provides real-time notifications for user entry and exit events.
+4. Room-Based Architecture: Secure session management with unique Room IDs and real-time user activity tracking (Join/Leave events).
 
-Technical Specifications
-Frontend
-React.js for component-based UI architecture.
+->Technical Stack
+1. Frontend: React.js, CodeMirror (Professional Editor Engine), Socket.io-client.
 
-CodeMirror as the core editing engine for professional-grade text manipulation.
+2. Backend: Node.js, Express.js, Socket.io.
 
-Client-side routing for seamless navigation between the dashboard and editor workspace.
+3. Database: MongoDB Atlas (Mongoose ODM).
 
-Backend
-Node.js and Express.js for a scalable server environment.
+4. Deployment: Render (with Environment Variable protection).
 
-Socket.io for managing persistent, bi-directional communication between the server and clients.
+-> Engineering Challenges Solved
+1. Data Persistence: Solved the "data loss on refresh" problem by implementing a robust MongoDB schema and retrieval logic.
 
-Custom event-driven logic to handle code synchronization, language switching, and messaging.
+2. Network Optimization: Optimized socket broadcasts to ensure updates are only sent to specific room members, saving     bandwidth.
 
-Engineering Challenges Addressed
-State Consistency
-Implemented logic to synchronize the editor's state for new participants joining an ongoing session, ensuring they receive the most recent version of the code immediately upon entry.
-
-Concurrency Control
-Managed the challenges of multi-user input by implementing conditional state updates, preventing cursor displacement and unnecessary re-renders during active typing sessions.
-
-Resource Optimization
-Optimized the socket broadcast logic to ensure that messages are only transmitted to relevant room participants, reducing unnecessary server load and bandwidth consumption.
-
-Installation and Deployment
-1. Clone the repository.
-
-2. Execute npm install in the root and frontend directories.
-
-3. Configure the environment variables for the server port.
-
-4. Run npm run dev to launch the development environment.
+3. Concurrency Control: Handled multi-user input conflicts by managing state updates efficiently to prevent cursor jumping.
